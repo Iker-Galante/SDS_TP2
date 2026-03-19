@@ -42,9 +42,9 @@ for SCENARIO in none fixed circular; do
     for ETA in 0.00 2.00 5.00; do
         DYNFILE="$OUTPUT_DIR/dynamic_${SCENARIO}_eta${ETA}_s0.txt"
         if [ -f "$DYNFILE" ]; then
-            ANIM_DIR="$OUTPUT_DIR/anim_${SCENARIO}_eta${ETA}"
+            ANIM_FILE="$OUTPUT_DIR/anim_${SCENARIO}_eta${ETA}.mp4"
             echo ">>> Animating $SCENARIO eta=$ETA"
-            uv run python animate.py "$DYNFILE" --output_dir "$ANIM_DIR" --skip 50 --frames 200
+            uv run python animate_video.py "$DYNFILE" "$ANIM_FILE" --skip 5 --frames 500
         fi
     done
 done

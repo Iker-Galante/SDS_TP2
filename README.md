@@ -47,14 +47,14 @@ uv run python plot_polarization.py <directorio_salida> --density <densidad>
 ```
 **Ejemplo:** `uv run python plot_polarization.py output/ --density 4.0`
 
-### Animaciones en OVITO
-Para generar los cuadros de la animación (usando *colormaps* HSV según el ángulo para las velocidades y resaltando a la partícula líder):
+### Animaciones (Video MP4) en OVITO
+Para generar directamente un video `.mp4` con la animación (usando *colormaps* HSV según el ángulo de orientación para las velocidades, y resaltando a la partícula líder en blanco/rojo):
 
 ```bash
-uv run python animate.py <archivo_dynamic.txt> --output_dir <directorio_destino> --frames <N> --skip <salto>
+uv run python animate_video.py <archivo_dynamic.txt> <archivo_video.mp4> --frames <N> --skip <salto>
 ```
 **Ejemplo:**
 ```bash
-uv run python animate.py output/dynamic_circular_eta2.00_s0.txt --output_dir output/animacion_circular --skip 5 --frames 200
+uv run python animate_video.py output/dynamic_circular_eta2.00_s0.txt output/circular_leader.mp4 --skip 5 --frames 1000
 ```
-Esto procesará las posiciones y las convertirá en imágenes que luego puedes juntar en un video o ver como una secuencia.
+Esto procesará las posiciones e internamente utilizará el motor de OVITO para exportar y guardar automáticamente el video resultante de la simulación.
