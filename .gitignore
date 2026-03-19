@@ -1,0 +1,5 @@
+output
+target/*
+.venv/*
+.agents/*
+.env/*
