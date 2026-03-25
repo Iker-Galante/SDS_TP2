@@ -1,9 +1,15 @@
 package ar.edu.itba.ss.vicsek;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.SortedSet;
+
 import ar.edu.itba.ss.cim.algorithms.CellIndexMethod;
 import ar.edu.itba.ss.cim.models.Particle;
-
-import java.util.*;
 
 /**
  * Vicsek flocking model simulation.
@@ -31,8 +37,8 @@ public class VicsekSimulation {
     private final double circularOmega; // angular velocity
 
     // State arrays
-    private double[] x, y, theta;
-    private int leaderIdx = 0;
+    private List<Particle> particles;
+    private Particle leader;
     private double leaderFixedAngle;
     private double leaderCircularAngle; // current angle on the circle
 
@@ -69,109 +75,87 @@ public class VicsekSimulation {
         this.circularOmega = speed / circularR; // v_tangential = v0
 
         // Initialize particles
-        this.x = new double[N];
-        this.y = new double[N];
-        this.theta = new double[N];
+        this.particles = new ArrayList<>(N);
 
         for (int i = 0; i < N; i++) {
-            x[i] = rng.nextDouble() * L;
-            y[i] = rng.nextDouble() * L;
-            theta[i] = rng.nextDouble() * 2.0 * Math.PI;
+            double x = rng.nextDouble() * L;
+            double y = rng.nextDouble() * L;
+            double theta = rng.nextDouble() * 2.0 * Math.PI;
+            particles.add(new Particle(i, x, y, speed, theta, 0, 0, false, rc));
+
         }
 
-        // Leader setup
-        if (leaderType == LeaderType.FIXED) {
-            leaderFixedAngle = theta[leaderIdx]; // random angle chosen at init
-        } else if (leaderType == LeaderType.CIRCULAR) {
-            // Place leader on the circle
-            leaderCircularAngle = rng.nextDouble() * 2.0 * Math.PI;
-            double rawX = circularCx + circularR * Math.cos(leaderCircularAngle);
-            double rawY = circularCy + circularR * Math.sin(leaderCircularAngle);
-            x[leaderIdx] = ((rawX % L) + L) % L;
-            y[leaderIdx] = ((rawY % L) + L) % L;
-            // Tangential direction
-            theta[leaderIdx] = leaderCircularAngle + Math.PI / 2.0;
+        if (leaderType != LeaderType.NONE){
+            leader = particles.get(rng.nextInt(0, N));
+            // Leader setup
+            if (leaderType == LeaderType.FIXED) {
+                leaderFixedAngle = leader.getTheta(); // random angle chosen at init
+            } else if (leaderType == LeaderType.CIRCULAR) {
+                // Place leader on the circle
+                leaderCircularAngle = rng.nextDouble() * 2.0 * Math.PI;
+                double rawX = circularCx + circularR * Math.cos(leaderCircularAngle);
+                double rawY = circularCy + circularR * Math.sin(leaderCircularAngle);
+                leader.setX((rawX + L) % L);
+                leader.setY((rawY + L) % L);
+                // Tangential direction
+                leader.setTheta(leaderCircularAngle + Math.PI / 2.0);
+            }
         }
     }
 
     /**
      * Run one simulation step. Returns the polarization va for this step.
      */
-    public double step() {
-        // Build particle list for CIM (point particles: radius=0)
-        List<Particle> particles = new ArrayList<>(N);
-        for (int i = 0; i < N; i++) {
-            particles.add(new Particle(i, x[i], y[i],
-                    speed * Math.cos(theta[i]), speed * Math.sin(theta[i]),
-                    0.0, 0.0));
-        }
-
+    public List<Particle> step() {
         // Find neighbors using CIM
         CellIndexMethod cim = new CellIndexMethod(M, particles, L, rc, 0.0, true);
-        Map<Particle, List<Particle>> neighborsMap = cim.getNeighbors();
+        Map<Particle, SortedSet<Particle>> neighborsMap = cim.getNeighbors();
 
-        // Build index-based neighbor lookup
-        Map<Integer, List<Integer>> neighborIds = new HashMap<>();
-        for (Map.Entry<Particle, List<Particle>> entry : neighborsMap.entrySet()) {
-            List<Integer> ids = new ArrayList<>();
-            for (Particle p : entry.getValue()) {
-                ids.add(p.getId());
-            }
-            neighborIds.put(entry.getKey().getId(), ids);
-        }
-
-        // Compute new angles
-        double[] newTheta = new double[N];
-        for (int i = 0; i < N; i++) {
+        Map<Particle, Double> newTheta = new HashMap<>();
+        for (Particle p : particles) {
             // Leader particles keep their angle
-            if (i == leaderIdx && leaderType != LeaderType.NONE) {
+            if (leaderType != LeaderType.NONE && p.equals(leader)) {
                 if (leaderType == LeaderType.FIXED) {
-                    newTheta[i] = leaderFixedAngle;
+                    newTheta.put(p, leaderFixedAngle);
                 } else { // CIRCULAR
                     // Will be set below after position update
-                    newTheta[i] = theta[i]; // placeholder
+                    newTheta.put(p, p.getTheta()); // TODO placeholder
                 }
                 continue;
             }
 
             // Include self in the average
-            double sinSum = Math.sin(theta[i]);
-            double cosSum = Math.cos(theta[i]);
-            List<Integer> neighbors = neighborIds.getOrDefault(i, Collections.emptyList());
-            for (int j : neighbors) {
-                sinSum += Math.sin(theta[j]);
-                cosSum += Math.cos(theta[j]);
+            double sinSum = Math.sin(p.getTheta());
+            double cosSum = Math.cos(p.getTheta());
+            Set<Particle> neighbors = neighborsMap.get(p);
+            for (Particle p2 : neighbors) {
+                sinSum += Math.sin(p2.getTheta());
+                cosSum += Math.cos(p2.getTheta());
             }
 
-            double avgAngle = Math.atan2(sinSum, cosSum);
+            double avgAngle = Math.atan2(sinSum / neighbors.size() + 1, cosSum / neighbors.size() + 1);
             double noise = eta * (rng.nextDouble() - 0.5); // Uniform(-eta/2, eta/2)
-            newTheta[i] = avgAngle + noise;
+            newTheta.put(p, avgAngle + noise);
         }
 
         // Update positions
-        for (int i = 0; i < N; i++) {
-            if (i == leaderIdx && leaderType == LeaderType.CIRCULAR) {
+        for (Particle p : particles) {
+            if (leaderType == LeaderType.CIRCULAR && p.equals(leader)) {
                 // Circular leader: advance on circle
                 leaderCircularAngle += circularOmega * dt;
                 double rawX = circularCx + circularR * Math.cos(leaderCircularAngle);
                 double rawY = circularCy + circularR * Math.sin(leaderCircularAngle);
-                x[i] = ((rawX % L) + L) % L;
-                y[i] = ((rawY % L) + L) % L;
+                p.setX((rawX + L) % L);
+                p.setY((rawY + L) % L);
                 // Tangential direction
-                newTheta[i] = leaderCircularAngle + Math.PI / 2.0;
+                p.setTheta(leaderCircularAngle + Math.PI / 2.0);
             } else {
-                x[i] = x[i] + speed * Math.cos(newTheta[i]) * dt;
-                y[i] = y[i] + speed * Math.sin(newTheta[i]) * dt;
-                // Periodic boundary conditions
-                x[i] = ((x[i] % L) + L) % L;
-                y[i] = ((y[i] % L) + L) % L;
+                p.setTheta(newTheta.get(p));
+                p.move(dt, L);
             }
         }
 
-        theta = newTheta;
-
-        // Compute polarization
-        return computePolarization();
+        return particles;
     }
 
     /**
@@ -179,9 +163,9 @@ public class VicsekSimulation {
      */
     public double computePolarization() {
         double sumVx = 0, sumVy = 0;
-        for (int i = 0; i < N; i++) {
-            sumVx += speed * Math.cos(theta[i]);
-            sumVy += speed * Math.sin(theta[i]);
+        for (Particle p : particles) {
+            sumVx += speed * Math.cos(p.getTheta());
+            sumVy += speed * Math.sin(p.getTheta());
         }
         double magnitude = Math.sqrt(sumVx * sumVx + sumVy * sumVy);
         return magnitude / (N * speed);
@@ -208,27 +192,11 @@ public class VicsekSimulation {
         return leaderType;
     }
 
-    public int getLeaderIdx() {
-        return leaderIdx;
+    public Particle getLeader() {
+        return leader;
     }
 
-    public double getX(int i) {
-        return x[i];
-    }
-
-    public double getY(int i) {
-        return y[i];
-    }
-
-    public double getTheta(int i) {
-        return theta[i];
-    }
-
-    public double getVx(int i) {
-        return speed * Math.cos(theta[i]);
-    }
-
-    public double getVy(int i) {
-        return speed * Math.sin(theta[i]);
+    public List<Particle> getParticles(){
+        return particles;
     }
 }

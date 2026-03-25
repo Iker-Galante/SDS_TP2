@@ -91,9 +91,13 @@ public class Particle implements Comparable<Particle> {
         this.vy = speed * Math.sin(theta);
     }
 
-    public void move(double dt) {
+    public void move(double dt, Double L) {
         this.x += vx * dt;
         this.y += vy * dt;
+        if (L != null && L > 0) {
+            x = ((x % L) + L) % L;
+            y = ((y % L) + L) % L;
+        }
     }
 
     public boolean isLeader() {
@@ -147,5 +151,13 @@ public class Particle implements Comparable<Particle> {
     @Override
     public int compareTo(Particle other){
         return this.getId() - other.getId();
+    }
+
+    //TODO remove once a better way has been coded in
+    public void setX(double x){
+        this.x = x;
+    }
+    public void setY(double y){
+        this.y = y;
     }
 }

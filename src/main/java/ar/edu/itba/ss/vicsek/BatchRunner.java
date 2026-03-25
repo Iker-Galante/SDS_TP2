@@ -36,7 +36,7 @@ public class BatchRunner {
         }
 
         String leaderTypeStr = args[0];
-        VicsekSimulation.LeaderType leaderType = parseLeaderType(leaderTypeStr);
+        VicsekSimulation.LeaderType leaderType = VicsekUtils.parseLeaderType(leaderTypeStr);
         String outputDir = args.length > 1 ? args[1] : "output";
         double density = args.length > 2 ? Double.parseDouble(args[2]) : DEFAULT_DENSITY;
         double L = args.length > 3 ? Double.parseDouble(args[3]) : DEFAULT_L;
@@ -78,7 +78,7 @@ public class BatchRunner {
 
                     try (BufferedWriter polWriter = new BufferedWriter(new FileWriter(polarizationFile))) {
                         // Initial state
-                        if (writeDynamic) writeFrame(dynWriter, sim, 0);
+                        if (writeDynamic) VicsekUtils.writeFrame(dynWriter, sim, 0);
                         double va = sim.computePolarization();
                         polWriter.write(String.format(Locale.US, "%d\t%.6f%n", 0, va));
 
@@ -86,8 +86,9 @@ public class BatchRunner {
                         int vaCount = 0;
 
                         for (int t = 1; t <= TOTAL_STEPS; t++) {
-                            va = sim.step();
-                            if (writeDynamic) writeFrame(dynWriter, sim, t);
+                            sim.step();
+                            va = sim.computePolarization();
+                            if (writeDynamic) VicsekUtils.writeFrame(dynWriter, sim, t);
                             polWriter.write(String.format(Locale.US, "%d\t%.6f%n", t, va));
 
                             if (t >= STEADY_STATE_START) {
@@ -125,28 +126,5 @@ public class BatchRunner {
         }
 
         System.out.println("Batch complete. Summary: " + summaryFile);
-    }
-
-    private static void writeFrame(BufferedWriter writer, VicsekSimulation sim, int t) throws IOException {
-        writer.write(String.valueOf(t));
-        writer.newLine();
-        int N = sim.getN();
-        int leaderIdx = sim.getLeaderIdx();
-        VicsekSimulation.LeaderType lt = sim.getLeaderType();
-        for (int i = 0; i < N; i++) {
-            int isLeader = (lt != VicsekSimulation.LeaderType.NONE && i == leaderIdx) ? 1 : 0;
-            writer.write(String.format(Locale.US, "%.6f\t%.6f\t%.6f\t%.6f\t%d",
-                    sim.getX(i), sim.getY(i), sim.getVx(i), sim.getVy(i), isLeader));
-            writer.newLine();
-        }
-    }
-
-    private static VicsekSimulation.LeaderType parseLeaderType(String s) {
-        return switch (s.toLowerCase()) {
-            case "none" -> VicsekSimulation.LeaderType.NONE;
-            case "fixed" -> VicsekSimulation.LeaderType.FIXED;
-            case "circular" -> VicsekSimulation.LeaderType.CIRCULAR;
-            default -> throw new IllegalArgumentException("Unknown leader type: " + s);
-        };
     }
 }
