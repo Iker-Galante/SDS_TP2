@@ -2,9 +2,10 @@
 Vicsek model animation using OVITO.
 Reads dynamic output files and renders frames with velocity arrows colored by angle.
 Leader particle is highlighted with a distinct marker.
+Produces individual PNGs and optionally stitches them into an .mp4 video.
 
 Usage:
-    uv run python animate.py <dynamic_file> [--frames N] [--output_dir dir] [--fps 30]
+    uv run python animate.py <dynamic_file> [--frames N] [--output_dir dir] [--fps 30] [--no-video]
 """
 import argparse
 import os
@@ -149,6 +150,30 @@ def render_frame(frame, L, output_path, frame_idx):
     pipeline.remove_from_scene()
 
 
+def frames_to_video(frame_dir, output_path, fps=30):
+    """Stitch rendered PNG frames into an .mp4 video using imageio-ffmpeg."""
+    import imageio
+    import glob
+
+    pattern = os.path.join(frame_dir, "frame_*.png")
+    frame_files = sorted(glob.glob(pattern))
+
+    if not frame_files:
+        print(f"No frames found in {frame_dir}, skipping video generation.")
+        return
+
+    print(f"Stitching {len(frame_files)} frames into {output_path} at {fps} fps...")
+
+    writer = imageio.get_writer(output_path, fps=fps, codec='libx264',
+                                output_params=['-pix_fmt', 'yuv420p'])
+    for fpath in frame_files:
+        img = imageio.imread(fpath)
+        writer.append_data(img)
+    writer.close()
+
+    print(f"Video saved: {output_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Vicsek model animation with OVITO")
     parser.add_argument("dynamic_file", help="Path to dynamic output file")
@@ -156,6 +181,8 @@ def main():
     parser.add_argument("--output_dir", default="animation_frames", help="Output directory for frames")
     parser.add_argument("--skip", type=int, default=1, help="Render every Nth frame")
     parser.add_argument("--L", type=float, default=10.0, help="Box side length")
+    parser.add_argument("--fps", type=int, default=30, help="Frames per second for video")
+    parser.add_argument("--no-video", action="store_true", help="Skip .mp4 generation (frames only)")
     args = parser.parse_args()
 
     print(f"Parsing {args.dynamic_file}...")
@@ -175,6 +202,13 @@ def main():
             print(f"  Rendered {rendered} frames...")
 
     print(f"Done. {rendered} frames saved to {args.output_dir}/")
+
+    # Generate .mp4 video
+    if not args.no_video and rendered > 0:
+        # Derive video filename from the dynamic file name
+        base = os.path.splitext(os.path.basename(args.dynamic_file))[0]
+        video_path = os.path.join(args.output_dir, f"{base}.mp4")
+        frames_to_video(args.output_dir, video_path, fps=args.fps)
 
 
 if __name__ == "__main__":
