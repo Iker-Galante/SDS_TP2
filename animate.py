@@ -8,8 +8,14 @@ Usage:
     uv run python animate.py <dynamic_file> [--frames N] [--output_dir dir] [--fps 30] [--no-video]
 """
 import argparse
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+import multiprocessing
+from multiprocessing.pool import AsyncResult
 import os
 import sys
+from concurrent.futures import as_completed
+from typing import List
 import numpy as np
 import matplotlib.colors as mcolors
 
@@ -181,7 +187,7 @@ def main():
     parser.add_argument("--output_dir", default="animation_frames", help="Output directory for frames")
     parser.add_argument("--skip", type=int, default=1, help="Render every Nth frame")
     parser.add_argument("--L", type=float, default=10.0, help="Box side length")
-    parser.add_argument("--fps", type=int, default=30, help="Frames per second for video")
+    parser.add_argument("--fps", type=int, default=60, help="Frames per second for video")
     parser.add_argument("--no-video", action="store_true", help="Skip .mp4 generation (frames only)")
     args = parser.parse_args()
 
@@ -192,19 +198,28 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
 
     total = len(frames) if args.frames == 0 else min(args.frames, len(frames))
-    rendered = 0
-    for idx in range(0, total, args.skip):
-        frame = frames[idx]
-        out_path = os.path.join(args.output_dir, f"frame_{idx:05d}.png")
-        render_frame(frame, args.L, out_path, idx)
-        rendered += 1
-        if rendered % 10 == 0:
-            print(f"  Rendered {rendered} frames...")
+    jobs: List[AsyncResult] = []
+    multiprocessing.set_start_method('spawn')
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        for idx in range(0, total, args.skip):
+            frame = frames[idx]
+            out_path = os.path.join(args.output_dir, f"frame_{idx:05d}.png")
+            jobs.append(pool.apply_async(render_frame, args=(frame, args.L, out_path, idx)))
 
-    print(f"Done. {rendered} frames saved to {args.output_dir}/")
+        rendered = 0
+        initTimestamp = datetime.now()
+        while len(jobs):
+            for job in jobs:
+                if job.ready():
+                    jobs.remove(job)
+                    rendered += 1
+                    printText = f"Rendered {rendered:{"0"+str(len(str(total)))}} frames ({rendered*100/total:5.2f}%), elapsed: {str(datetime.now() - initTimestamp).split('.')[0]}, remaining: {str((datetime.now() - initTimestamp) / (rendered/total) * (total - rendered) / total).split('.')[0]}"
+                    print(f"\r\033[7m{printText[0:int(len(printText)*rendered/total)]}\033[0m{printText[int(len(printText)*rendered/total):]}", end='')
+
+    print(f"Done. {total} frames saved to {args.output_dir}/")
 
     # Generate .mp4 video
-    if not args.no_video and rendered > 0:
+    if not args.no_video:
         # Derive video filename from the dynamic file name
         base = os.path.splitext(os.path.basename(args.dynamic_file))[0]
         video_path = os.path.join(args.output_dir, f"{base}.mp4")

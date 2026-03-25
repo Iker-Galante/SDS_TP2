@@ -2,4 +2,6 @@ output
 target/*
 .venv/*
 .agents/*
+__pycache__
 .env/*
+animation_frames
