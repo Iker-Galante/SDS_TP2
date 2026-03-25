@@ -5,6 +5,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
@@ -16,17 +18,16 @@ public class OutputWriter {
      * Writes the neighbors mapping to the output file as described:
      * [id] [neighbor_id1] [neighbor_id2] ...
      */
-    public static void writeNeighbors(Map<Particle, List<Particle>> neighbors, String outputFile) throws IOException {
+    public static void writeNeighbors(Map<Particle, SortedSet<Particle>> neighbors, String outputFile) throws IOException {
         try {
             if (new java.io.File(outputFile).getParentFile() != null)
                 new java.io.File(outputFile).getParentFile().mkdirs();
         } catch (Exception e) {
         }
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
-            for (Map.Entry<Particle, List<Particle>> entry : neighbors.entrySet()) {
+            for (Map.Entry<Particle, SortedSet<Particle>> entry : neighbors.entrySet()) {
                 StringBuilder line = new StringBuilder();
                 line.append("[").append(entry.getKey().getId()).append('\t');
-                entry.getValue().sort((p1, p2) -> p1.getId() - p2.getId());
                 for (Particle neighbor : entry.getValue()) {
                     line.append(" ").append(neighbor.getId());
                 }

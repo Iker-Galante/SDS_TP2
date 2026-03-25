@@ -2,14 +2,14 @@ package ar.edu.itba.ss.cim.models;
 
 import java.util.Objects;
 
-public class Particle {
+public class Particle implements Comparable<Particle> {
     private final int id; // Id unico
     private double x; // Posicion en x
     private double y; // Posicion en y
     private double vx; // Velocidad en x
     private double vy; // Velocidad en y
     private final double radius; // Radio
-    private final int effectRadius;
+    private final double effectRadius;
     private final double property; // Propiedad
     private final double speed; // Magnitud de velocidad (módulo v)
     private double theta; // Ángulo continuo (en radianes)
@@ -31,7 +31,7 @@ public class Particle {
     }
 
     // Constructor alternativo usando speed y theta
-    public Particle(int id, double x, double y, double speed, double theta, double radius, double property, boolean isLeade, int effectRadius) {
+    public Particle(int id, double x, double y, double speed, double theta, double radius, double property, boolean isLeade, double effectRadius) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -142,5 +142,10 @@ public class Particle {
 
     public boolean checkNeighbor(Particle other, double L, boolean periodic, double rc){
         return ((!this.equals(other)) && this.borderDistance(other, L, periodic) < rc);
+    }
+
+    @Override
+    public int compareTo(Particle other){
+        return this.getId() - other.getId();
     }
 }

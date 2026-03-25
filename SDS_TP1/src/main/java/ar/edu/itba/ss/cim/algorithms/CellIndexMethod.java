@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import ar.edu.itba.ss.cim.models.Particle;
 
@@ -16,6 +18,7 @@ public class CellIndexMethod implements NeighborFinder {
     private final List<Particle> particles;
     private final List<Particle>[][] grid;
 
+    @SuppressWarnings("unchecked")
     public CellIndexMethod(int M, List<Particle> particles, double L, double rc, double maxRadius, boolean periodic) {
         this.M = M;
         this.L = L;
@@ -51,15 +54,15 @@ public class CellIndexMethod implements NeighborFinder {
     }
 
     @Override
-    public Map<Particle, List<Particle>> getNeighbors() {
+    public Map<Particle, SortedSet<Particle>> getNeighbors() {
         // Validate constraint: L/M > rc + 2 * r_max
         if (L / M <= rc + 2 * maxRadius) {
             throw new RuntimeException("Grid size too small, cannot guarantee precision");
         }
 
-        Map<Particle, List<Particle>> neighbors = new HashMap<>(particles.size());
+        Map<Particle, SortedSet<Particle>> neighbors = new HashMap<>(particles.size());
         for (Particle p : particles) {
-            neighbors.put(p, new ArrayList<>());
+            neighbors.put(p, new TreeSet<>());
         }
 
         // Check neighbors
@@ -91,7 +94,7 @@ public class CellIndexMethod implements NeighborFinder {
         return neighbors;
     }
 
-    private void checkNeighborCell(int nRow, int nCol, Particle p1, Map<Particle, List<Particle>> neighborSets) {
+    private void checkNeighborCell(int nRow, int nCol, Particle p1, Map<Particle, SortedSet<Particle>> neighborSets) {
         if (!periodic) {
             // Check bounds strictly if not periodic
             if (nRow < 0 || nRow >= M || nCol < 0 || nCol >= M)

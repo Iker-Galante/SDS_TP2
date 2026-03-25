@@ -1,9 +1,10 @@
 package ar.edu.itba.ss.cim.algorithms;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import ar.edu.itba.ss.cim.models.Particle;
 
@@ -21,9 +22,9 @@ public class BruteForce implements NeighborFinder {
     }
 
     @Override
-    public Map<Particle, List<Particle>> getNeighbors() {
-        Map<Particle, List<Particle>> neighbors = new HashMap<>(particles.size());
-        particles.forEach(p -> neighbors.put(p, new ArrayList<>()));
+    public Map<Particle, SortedSet<Particle>> getNeighbors() {
+        Map<Particle, SortedSet<Particle>> neighbors = new HashMap<>(particles.size());
+        particles.forEach(p -> neighbors.put(p, new TreeSet<>()));
 
         for (int i = 0; i < particles.size(); i++) {
             Particle p1 = particles.get(i);

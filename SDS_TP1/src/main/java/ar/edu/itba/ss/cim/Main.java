@@ -2,6 +2,7 @@ package ar.edu.itba.ss.cim;
 
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
 import java.util.TreeMap;
 
 import ar.edu.itba.ss.cim.algorithms.BruteForce;
@@ -119,7 +120,7 @@ public class Main {
                 }
 
                 long startTime = System.nanoTime();
-                Map<Particle, List<Particle>> neighbors;
+                Map<Particle, SortedSet<Particle>> neighbors;
                 try {
                     neighbors = finder.getNeighbors();
                 } catch (RuntimeException e) {
