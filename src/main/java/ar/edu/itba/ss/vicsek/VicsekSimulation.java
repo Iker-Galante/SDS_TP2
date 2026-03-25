@@ -119,7 +119,13 @@ public class VicsekSimulation {
                     newTheta.put(p, leaderFixedAngle);
                 } else { // CIRCULAR
                     // Will be set below after position update
-                    newTheta.put(p, p.getTheta()); // TODO placeholder
+                    leaderCircularAngle += circularOmega * dt;
+                    double rawX = circularCx + circularR * Math.cos(leaderCircularAngle);
+                    double rawY = circularCy + circularR * Math.sin(leaderCircularAngle);
+                    p.setX((rawX + L) % L);
+                    p.setY((rawY + L) % L);
+                    // Tangential direction
+                    newTheta.put(p, leaderCircularAngle + Math.PI / 2.0);                
                 }
                 continue;
             }
@@ -133,24 +139,15 @@ public class VicsekSimulation {
                 cosSum += Math.cos(p2.getTheta());
             }
 
-            double avgAngle = Math.atan2(sinSum / neighbors.size() + 1, cosSum / neighbors.size() + 1);
+            double avgAngle = Math.atan2(sinSum, cosSum);
             double noise = eta * (rng.nextDouble() - 0.5); // Uniform(-eta/2, eta/2)
             newTheta.put(p, avgAngle + noise);
         }
 
         // Update positions
         for (Particle p : particles) {
-            if (leaderType == LeaderType.CIRCULAR && p.equals(leader)) {
-                // Circular leader: advance on circle
-                leaderCircularAngle += circularOmega * dt;
-                double rawX = circularCx + circularR * Math.cos(leaderCircularAngle);
-                double rawY = circularCy + circularR * Math.sin(leaderCircularAngle);
-                p.setX((rawX + L) % L);
-                p.setY((rawY + L) % L);
-                // Tangential direction
-                p.setTheta(leaderCircularAngle + Math.PI / 2.0);
-            } else {
-                p.setTheta(newTheta.get(p));
+            p.setTheta(newTheta.get(p));
+            if (!(leaderType == LeaderType.CIRCULAR) || !p.equals(leader)) {
                 p.move(dt, L);
             }
         }

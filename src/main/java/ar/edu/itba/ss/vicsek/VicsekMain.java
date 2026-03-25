@@ -58,7 +58,7 @@ public class VicsekMain {
             double va = sim.computePolarization();
             polWriter.write(String.format(Locale.US, "%d\t%.6f%n", 0, va));
 
-            for (int t = 1; t <= totalSteps; t++) {
+            for (int t = 1; t < totalSteps; t++) {
                 sim.step();
                 VicsekUtils.writeFrame(dynWriter, sim, t);
                 va = sim.computePolarization();
