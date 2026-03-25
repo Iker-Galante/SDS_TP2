@@ -7,12 +7,13 @@ Produces individual PNGs and optionally stitches them into an .mp4 video.
 Usage:
     uv run python animate.py <dynamic_file> [--frames N] [--output_dir dir] [--fps 30] [--no-video]
 """
+import os
+os.environ["OVITO_THREAD_COUNT"] = "1"
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import multiprocessing
 from multiprocessing.pool import AsyncResult
-import os
 import sys
 from concurrent.futures import as_completed
 from typing import List
@@ -172,12 +173,14 @@ def frames_to_video(frame_dir, output_path, fps=30):
 
     writer = imageio.get_writer(output_path, fps=fps, codec='libx264',
                                 output_params=['-pix_fmt', 'yuv420p'])
-    for fpath in frame_files:
+    for idx, fpath in enumerate(frame_files):
         img = imageio.imread(fpath)
         writer.append_data(img)
+        printText = f"Stitched {idx:{"0"+str(len(str(len(frame_files))))}} frames ({idx*100/len(frame_files):5.2f}%)"
+        print(f"\r\033[7m{printText[0:int(len(printText)*idx/len(frame_files))]}\033[0m{printText[int(len(printText)*idx/len(frame_files)):]}", end='')
     writer.close()
 
-    print(f"Video saved: {output_path}")
+    print(f"\nVideo saved: {output_path}")
 
 
 def main():
@@ -216,7 +219,7 @@ def main():
                     printText = f"Rendered {rendered:{"0"+str(len(str(total)))}} frames ({rendered*100/total:5.2f}%), elapsed: {str(datetime.now() - initTimestamp).split('.')[0]}, remaining: {str((datetime.now() - initTimestamp) / (rendered/total) * (total - rendered) / total).split('.')[0]}"
                     print(f"\r\033[7m{printText[0:int(len(printText)*rendered/total)]}\033[0m{printText[int(len(printText)*rendered/total):]}", end='')
 
-    print(f"Done. {total} frames saved to {args.output_dir}/")
+    print(f"\nDone. {total} frames saved to {args.output_dir}/")
 
     # Generate .mp4 video
     if not args.no_video:
