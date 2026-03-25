@@ -18,17 +18,17 @@ public class VicsekSimulation {
     // Simulation parameters
     private final int N;
     private final double L;
-    private final double speed;     // v0
-    private final double rc;        // interaction radius
-    private final double eta;       // noise amplitude
-    private final double dt;        // time step
+    private final double speed; // v0
+    private final double rc; // interaction radius
+    private final double eta; // noise amplitude
+    private final double dt; // time step
     private final LeaderType leaderType;
 
     // Circular leader params
-    private final double circularR;      // radius of circular trajectory
-    private final double circularCx;     // center x
-    private final double circularCy;     // center y
-    private final double circularOmega;  // angular velocity
+    private final double circularR; // radius of circular trajectory
+    private final double circularCx; // center x
+    private final double circularCy; // center y
+    private final double circularOmega; // angular velocity
 
     // State arrays
     private double[] x, y, theta;
@@ -42,7 +42,7 @@ public class VicsekSimulation {
     private final int M;
 
     public VicsekSimulation(int N, double L, double speed, double rc, double eta,
-                            double dt, LeaderType leaderType, long seed) {
+            double dt, LeaderType leaderType, long seed) {
         this.N = N;
         this.L = L;
         this.speed = speed;
@@ -59,7 +59,8 @@ public class VicsekSimulation {
             tempM--;
         }
         this.M = tempM;
-        if (M < 1) throw new IllegalArgumentException("L/rc too small for CIM");
+        if (M < 1)
+            throw new IllegalArgumentException("L/rc too small for CIM");
 
         // Circular leader parameters
         this.circularR = 5.0;
@@ -187,16 +188,47 @@ public class VicsekSimulation {
     }
 
     // Getters for output
-    public int getN() { return N; }
-    public double getL() { return L; }
-    public double getSpeed() { return speed; }
-    public double getEta() { return eta; }
-    public LeaderType getLeaderType() { return leaderType; }
-    public int getLeaderIdx() { return leaderIdx; }
+    public int getN() {
+        return N;
+    }
 
-    public double getX(int i) { return x[i]; }
-    public double getY(int i) { return y[i]; }
-    public double getTheta(int i) { return theta[i]; }
-    public double getVx(int i) { return speed * Math.cos(theta[i]); }
-    public double getVy(int i) { return speed * Math.sin(theta[i]); }
+    public double getL() {
+        return L;
+    }
+
+    public double getSpeed() {
+        return speed;
+    }
+
+    public double getEta() {
+        return eta;
+    }
+
+    public LeaderType getLeaderType() {
+        return leaderType;
+    }
+
+    public int getLeaderIdx() {
+        return leaderIdx;
+    }
+
+    public double getX(int i) {
+        return x[i];
+    }
+
+    public double getY(int i) {
+        return y[i];
+    }
+
+    public double getTheta(int i) {
+        return theta[i];
+    }
+
+    public double getVx(int i) {
+        return speed * Math.cos(theta[i]);
+    }
+
+    public double getVy(int i) {
+        return speed * Math.sin(theta[i]);
+    }
 }
