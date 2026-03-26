@@ -114,36 +114,40 @@ def render_frame(frame, L, output_path, frame_idx):
     cell = data.create_cell(cell_matrix, pbc=(True, True, False))
 
     # Create particles
-    particles = data.create_particles(count=N)
-    particles.create_property("Position", data=positions)
+    # particles = data.create_particles(count=N)
+    vectors = data.vectors.create("Vectors", count=N)
+    vectors.create_property("Position", data=positions)
 
     # Particle radii — leader is bigger
     radii = np.full(N, 0.08)
     radii[leader_mask] = 0.2
-    particles.create_property("Radius", data=radii)
+    #particles.create_property("Radius", data=radii)
 
     # Particle colors — leader is white
     particle_colors = colors.copy()
     particle_colors[leader_mask] = [1.0, 1.0, 1.0]
-    particles.create_property("Color", data=particle_colors)
+    vectors.create_property("Color", data=particle_colors)
 
     # Create arrows (velocity vectors) as a vector property
     # Scale velocity arrows for visibility
-    arrow_scale = 15.0  # scale factor for arrow length
+    arrow_scale = 4.0  # scale factor for arrow length
     arrow_vectors = velocities * arrow_scale
-    particles.create_property("Force", data=arrow_vectors)  # Use Force for arrows
+    arrow_vectors[leader_mask] = velocities[leader_mask] * 8
+    vectors.create_property("Direction", data=arrow_vectors)  # Use Force for arrows
 
     # Arrow colors
     arrow_colors = colors.copy()
     arrow_colors[leader_mask] = [1.0, 0.2, 0.2]  # red arrows for leader
-    particles.create_property("Vector Color", data=arrow_colors)
+    #particles.create_property("Vector Color", data=arrow_colors)
 
     pipeline = Pipeline(source=StaticSource(data=data))
     pipeline.add_to_scene()
 
     # Configure particle vis
-    particles.vis.radius = 0.08
-    particles.vis.shape = ParticlesVis.Shape.Circle
+    #particles.vis.radius = 0.08
+    #particles.vis.shape = ParticlesVis.Shape.Circle
+    vectors.vis.scaling=2
+    vectors.vis.width=0.02
 
     # Configure viewport
     vp = Viewport()
@@ -176,6 +180,7 @@ def frames_to_video(frame_dir, output_path, fps=30):
     for idx, fpath in enumerate(frame_files):
         img = imageio.v3.imread(fpath)
         writer.append_data(img)
+        os.remove(fpath)
         printText = f"Stitched {idx+1:{"0"+str(len(str(len(frame_files))))}} frames ({(idx+1)*100/len(frame_files):5.2f}%)"
         print(f"\r\033[7m{printText[0:int(len(printText)*(idx+1)/len(frame_files))]}\033[0m{printText[int(len(printText)*(idx+1)/len(frame_files)):]}", end='')
     writer.close()
