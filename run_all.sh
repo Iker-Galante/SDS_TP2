@@ -24,14 +24,14 @@ echo "============================================"
 for SCENARIO in none fixed circular; do
     echo ""
     echo ">>> Running batch: $SCENARIO"
-    java -cp "$JAR" ar.edu.itba.ss.vicsek.BatchRunner "$SCENARIO" "$OUTPUT_DIR" "$DENSITY" "$L"
+    java -cp "$JAR" ar.edu.itba.ss.vicsek.BatchRunner "$SCENARIO" "$OUTPUT_DIR/simulation" "$DENSITY" "$L"
 done
 
 echo ""
 echo "============================================"
 echo " Generating Plots"
 echo "============================================"
-uv run python plot_polarization.py "$OUTPUT_DIR" --density "$DENSITY"
+uv run python plot_polarization.py "$OUTPUT_DIR/simulation" "$OUTPUT_DIR" --density "$DENSITY"
 
 echo ""
 echo "============================================"
@@ -40,11 +40,11 @@ echo "============================================"
 # Render a few sample frames for each scenario at low and high noise
 for SCENARIO in none fixed circular; do
     for ETA in 0.00 2.00 5.00; do
-        DYNFILE="$OUTPUT_DIR/dynamic_${SCENARIO}_eta${ETA}_s0.txt"
+        DYNFILE="$OUTPUT_DIR/simulation/dynamic_${SCENARIO}_eta${ETA}_s0.txt"
         if [ -f "$DYNFILE" ]; then
-            ANIM_DIR="$OUTPUT_DIR/anim_${SCENARIO}_eta${ETA}"
+            ANIM_DIR="$OUTPUT_DIR/animation/anim_${SCENARIO}_eta${ETA}"
             echo ">>> Animating $SCENARIO eta=$ETA"
-            uv run python animate.py "$DYNFILE" --output_dir "$ANIM_DIR" --skip 50 --frames 200
+            uv run python animate.py "$DYNFILE" --output_dir "$ANIM_DIR" --frames 200
         fi
     done
 done

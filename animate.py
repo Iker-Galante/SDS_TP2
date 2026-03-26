@@ -110,7 +110,7 @@ def render_frame(frame, L, output_path, frame_idx):
     data = DataCollection()
 
     # Simulation cell
-    cell_matrix = [[L, 0, 0, 0], [0, L, 0, 0], [0, 0, 2, 0]]
+    cell_matrix = [[L, 0, 0, 0], [0, L, 0, 0], [0, 0, 1, 0]]
     cell = data.create_cell(cell_matrix, pbc=(True, True, False))
 
     # Create particles
@@ -172,12 +172,12 @@ def frames_to_video(frame_dir, output_path, fps=30):
     print(f"Stitching {len(frame_files)} frames into {output_path} at {fps} fps...")
 
     writer = imageio.get_writer(output_path, fps=fps, codec='libx264',
-                                output_params=['-pix_fmt', 'yuv420p'])
+                                pixelformat='yuv420p')
     for idx, fpath in enumerate(frame_files):
-        img = imageio.imread(fpath)
+        img = imageio.v3.imread(fpath)
         writer.append_data(img)
-        printText = f"Stitched {idx:{"0"+str(len(str(len(frame_files))))}} frames ({idx*100/len(frame_files):5.2f}%)"
-        print(f"\r\033[7m{printText[0:int(len(printText)*idx/len(frame_files))]}\033[0m{printText[int(len(printText)*idx/len(frame_files)):]}", end='')
+        printText = f"Stitched {idx+1:{"0"+str(len(str(len(frame_files))))}} frames ({(idx+1)*100/len(frame_files):5.2f}%)"
+        print(f"\r\033[7m{printText[0:int(len(printText)*(idx+1)/len(frame_files))]}\033[0m{printText[int(len(printText)*(idx+1)/len(frame_files)):]}", end='')
     writer.close()
 
     print(f"\nVideo saved: {output_path}")
@@ -219,7 +219,7 @@ def main():
                     printText = f"Rendered {rendered:{"0"+str(len(str(total)))}} frames ({rendered*100/total:5.2f}%), elapsed: {str(datetime.now() - initTimestamp).split('.')[0]}, remaining: {str((datetime.now() - initTimestamp) / (rendered/total) * (total - rendered) / total).split('.')[0]}"
                     print(f"\r\033[7m{printText[0:int(len(printText)*rendered/total)]}\033[0m{printText[int(len(printText)*rendered/total):]}", end='')
 
-    print(f"\nDone. {total} frames saved to {args.output_dir}/")
+    print(f"\nDone. {total} frames saved to {args.output_dir}")
 
     # Generate .mp4 video
     if not args.no_video:

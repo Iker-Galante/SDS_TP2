@@ -25,14 +25,14 @@ Write-Host "============================================"
 foreach ($scenario in @("none", "fixed", "circular")) {
     Write-Host ""
     Write-Host ">>> Running batch: $scenario"
-    java -cp $JAR ar.edu.itba.ss.vicsek.BatchRunner $scenario $OutputDir $Density $L
+    java -cp $JAR ar.edu.itba.ss.vicsek.BatchRunner $scenario "$OutputDir/simulation" $Density $L
 }
 
 Write-Host ""
 Write-Host "============================================"
 Write-Host " Generating Plots"
 Write-Host "============================================"
-uv run python plot_polarization.py $OutputDir --density $Density
+uv run python plot_polarization.py "$OutputDir/simulation" $OutputDir --density $Density
 
 Write-Host ""
 Write-Host "============================================"
@@ -41,11 +41,11 @@ Write-Host "============================================"
 # Render sample animations for each scenario at low and high noise
 foreach ($scenario in @("none", "fixed", "circular")) {
     foreach ($eta in @("0.00", "2.00", "5.00")) {
-        $dynFile = "$OutputDir/dynamic_${scenario}_eta${eta}_s0.txt"
+        $dynFile = "$OutputDir/simulation/dynamic_${scenario}_eta${eta}_s0.txt"
         if (Test-Path $dynFile) {
-            $animDir = "$OutputDir/anim_${scenario}_eta${eta}"
+            $animDir = "$OutputDir/animation/anim_${scenario}_eta${eta}"
             Write-Host ">>> Animating $scenario eta=$eta"
-            uv run python animate.py $dynFile --output_dir $animDir --skip 50 --frames 200 --fps 30
+            uv run python animate.py $dynFile --output_dir $animDir --frames 200 --fps 30
         }
     }
 }

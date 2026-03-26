@@ -49,18 +49,18 @@ def setup_style():
     })
 
 
-def plot_temporal_evolution(output_dir, scenario, density_tag="rho4"):
+def plot_temporal_evolution(simulation_dir, output_dir, scenario, density_tag="rho4"):
     """
     Plot va(t) for a few characteristic eta values (b).
     Shows how steady state is identified.
     """
     # Find polarization files for this scenario, seed 0
-    pattern = os.path.join(output_dir, f"polarization_{scenario}_eta*_s0.txt")
+    pattern = os.path.join(simulation_dir, f"polarization_{scenario}_eta*_s0.txt")
     files = sorted(glob.glob(pattern))
 
     if not files:
         # Try without seed suffix (single run)
-        pattern = os.path.join(output_dir, f"polarization_{scenario}_eta*.txt")
+        pattern = os.path.join(simulation_dir, f"polarization_{scenario}_eta*.txt")
         files = sorted(glob.glob(pattern))
 
     if not files:
@@ -113,11 +113,11 @@ def plot_temporal_evolution(output_dir, scenario, density_tag="rho4"):
     print(f"Saved: {out_path}")
 
 
-def plot_va_vs_eta(output_dir, scenario, density_tag="rho4"):
+def plot_va_vs_eta(simulation_dir, output_dir, scenario, density_tag="rho4"):
     """
     Plot va vs eta with error bars (c).
     """
-    summary_file = os.path.join(output_dir, f"summary_{scenario}_{density_tag}.csv")
+    summary_file = os.path.join(simulation_dir, f"summary_{scenario}_{density_tag}.csv")
 
     if not os.path.exists(summary_file):
         print(f"Summary file not found: {summary_file}")
@@ -144,7 +144,7 @@ def plot_va_vs_eta(output_dir, scenario, density_tag="rho4"):
     return eta, va_mean, va_std
 
 
-def plot_comparative(output_dir, scenarios, density_tag="rho4"):
+def plot_comparative(simulation_dir, output_dir, scenarios, density_tag="rho4"):
     """
     Plot comparative va vs eta for all scenarios overlaid (d).
     """
@@ -167,7 +167,7 @@ def plot_comparative(output_dir, scenarios, density_tag="rho4"):
     }
 
     for scenario in scenarios:
-        summary_file = os.path.join(output_dir, f"summary_{scenario}_{density_tag}.csv")
+        summary_file = os.path.join(simulation_dir, f"summary_{scenario}_{density_tag}.csv")
         if not os.path.exists(summary_file):
             print(f"Skip {scenario}: {summary_file} not found")
             continue
@@ -198,6 +198,7 @@ def plot_comparative(output_dir, scenarios, density_tag="rho4"):
 
 def main():
     parser = argparse.ArgumentParser(description="Vicsek model analysis plots")
+    parser.add_argument("simulation_dir", help="Directory with simulation output files")
     parser.add_argument("output_dir", help="Directory with simulation output files")
     parser.add_argument("--scenarios", nargs='+', default=['none', 'fixed', 'circular'],
                         help="Scenarios to plot")
@@ -211,13 +212,13 @@ def main():
     for scenario in args.scenarios:
         print(f"\n=== Scenario: {scenario} ===")
         # (b) Temporal evolution
-        plot_temporal_evolution(args.output_dir, scenario, density_tag)
+        plot_temporal_evolution(args.simulation_dir, args.output_dir, scenario, density_tag)
         # (c) va vs eta
-        plot_va_vs_eta(args.output_dir, scenario, density_tag)
+        plot_va_vs_eta(args.simulation_dir, args.output_dir, scenario, density_tag)
 
     # (d) Comparative
     print(f"\n=== Comparative ===")
-    plot_comparative(args.output_dir, args.scenarios, density_tag)
+    plot_comparative(args.simulation_dir, args.output_dir, args.scenarios, density_tag)
 
 
 if __name__ == "__main__":
