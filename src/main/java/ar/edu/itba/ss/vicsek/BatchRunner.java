@@ -68,7 +68,7 @@ public class BatchRunner {
 
 
         ExecutorService batchExecutor = Executors.newFixedThreadPool(ETA_VALUES.length);
-        ExecutorService simulationExecutor = Executors.newFixedThreadPool(16);
+        ExecutorService simulationExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         try (BufferedWriter summaryWriter = new BufferedWriter(new FileWriter(summaryFile))) {
             summaryWriter.write("eta,va_mean,va_std");
             summaryWriter.newLine();
