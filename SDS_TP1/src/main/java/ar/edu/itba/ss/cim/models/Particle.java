@@ -9,7 +9,6 @@ public class Particle implements Comparable<Particle> {
     private double vx; // Velocidad en x
     private double vy; // Velocidad en y
     private final double radius; // Radio
-    private final double effectRadius;
     private final double property; // Propiedad
     private final double speed; // Magnitud de velocidad (módulo v)
     private double theta; // Ángulo continuo (en radianes)
@@ -23,7 +22,6 @@ public class Particle implements Comparable<Particle> {
         this.vx = vx;
         this.vy = vy;
         this.radius = radius;
-        this.effectRadius = 0;
         this.property = property;
         this.speed = Math.hypot(vx, vy); // Módulo de velocidad
         this.theta = Math.atan2(vy, vx); // Ángulo continuo inicial (-π a π)
@@ -31,7 +29,7 @@ public class Particle implements Comparable<Particle> {
     }
 
     // Constructor alternativo usando speed y theta
-    public Particle(int id, double x, double y, double speed, double theta, double radius, double property, boolean isLeade, double effectRadius) {
+    public Particle(int id, double x, double y, double speed, double theta, double radius, double property, boolean isLeade) {
         this.id = id;
         this.x = x;
         this.y = y;
@@ -42,7 +40,6 @@ public class Particle implements Comparable<Particle> {
         this.radius = radius;
         this.property = property;
         this.isLeader = false;
-        this.effectRadius = effectRadius;
     }
 
     public int getId() {

@@ -1,7 +1,20 @@
 package ar.edu.itba.ss.vicsek;
 
-import java.io.*;
-import java.util.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+import ar.edu.itba.ss.vicsek.VicsekSimulation.LeaderType;
 
 /**
  * Batch runner: sweeps over eta values and multiple seeds for each scenario.
@@ -53,72 +66,23 @@ public class BatchRunner {
         System.out.printf("Seeds per eta: %d, Total steps: %d, Steady state from: %d%n",
                 NUM_SEEDS, TOTAL_STEPS, STEADY_STATE_START);
 
+
+        ExecutorService batchExecutor = Executors.newFixedThreadPool(ETA_VALUES.length);
+        ExecutorService simulationExecutor = Executors.newFixedThreadPool(16);
         try (BufferedWriter summaryWriter = new BufferedWriter(new FileWriter(summaryFile))) {
             summaryWriter.write("eta,va_mean,va_std");
             summaryWriter.newLine();
 
             for (double eta : ETA_VALUES) {
-                double[] vaValues = new double[NUM_SEEDS];
-                String etaTag = String.format(Locale.US, "%.2f", eta);
-
-                for (int s = 0; s < NUM_SEEDS; s++) {
-                    long seed = 42 + s * 1000;
-                    System.out.printf("  eta=%.2f, seed=%d (run %d/%d)...%n", eta, seed, s + 1, NUM_SEEDS);
-
-                    VicsekSimulation sim = new VicsekSimulation(N, L, DEFAULT_SPEED, DEFAULT_RC,
-                            eta, DEFAULT_DT, leaderType, seed);
-
-                    String dynamicFile = outputDir + "/dynamic_" + scenarioTag + "_eta" + etaTag + "_s" + s + ".txt";
-                    String polarizationFile = outputDir + "/polarization_" + scenarioTag + "_eta" + etaTag + "_s" + s + ".txt";
-
-                    // Only write dynamic files for first seed (to keep disk usage down)
-                    boolean writeDynamic = (s == 0);
-
-                    BufferedWriter dynWriter = writeDynamic ? new BufferedWriter(new FileWriter(dynamicFile)) : null;
-
-                    try (BufferedWriter polWriter = new BufferedWriter(new FileWriter(polarizationFile))) {
-                        // Initial state
-                        if (writeDynamic) VicsekUtils.writeFrame(dynWriter, sim, 0);
-                        double va = sim.computePolarization();
-                        polWriter.write(String.format(Locale.US, "%d\t%.6f%n", 0, va));
-
-                        double vaSum = 0;
-                        int vaCount = 0;
-
-                        for (int t = 1; t <= TOTAL_STEPS; t++) {
-                            sim.step();
-                            va = sim.computePolarization();
-                            if (writeDynamic) VicsekUtils.writeFrame(dynWriter, sim, t);
-                            polWriter.write(String.format(Locale.US, "%d\t%.6f%n", t, va));
-
-                            if (t >= STEADY_STATE_START) {
-                                vaSum += va;
-                                vaCount++;
-                            }
-                        }
-
-                        vaValues[s] = vaSum / vaCount;
-                    }
-
-                    if (dynWriter != null) dynWriter.close();
-                }
-
-                // Compute mean and std
-                double mean = 0;
-                for (double v : vaValues) mean += v;
-                mean /= NUM_SEEDS;
-
-                double variance = 0;
-                for (double v : vaValues) variance += (v - mean) * (v - mean);
-                variance /= NUM_SEEDS;
-                double std = Math.sqrt(variance);
-
-                summaryWriter.write(String.format(Locale.US, "%.2f,%.6f,%.6f", eta, mean, std));
-                summaryWriter.newLine();
-                summaryWriter.flush();
-
-                System.out.printf("  eta=%.2f => va_mean=%.4f, va_std=%.4f%n", eta, mean, std);
+                batchExecutor.submit(new RunSimulationBatch(simulationExecutor, eta, N, L, outputDir, scenarioTag, leaderType, summaryWriter));
             }
+            try{
+                batchExecutor.shutdown();
+                batchExecutor.awaitTermination(100, TimeUnit.SECONDS);
+            } catch (InterruptedException e){
+                batchExecutor.shutdownNow();
+            }
+            simulationExecutor.shutdown();
 
         } catch (IOException e) {
             System.err.println("Error: " + e.getMessage());
@@ -126,5 +90,138 @@ public class BatchRunner {
         }
 
         System.out.println("Batch complete. Summary: " + summaryFile);
+    }
+
+    private static class RunSimulationBatch implements Runnable{
+
+        private final ExecutorService executor;
+        private final double eta;
+        private final int N;
+        private final double L;
+        private final String outputDir;
+        private final String scenarioTag;
+        private final LeaderType leaderType;
+        private final BufferedWriter summaryWriter;
+
+        public RunSimulationBatch(ExecutorService executor, double eta, int N, double L, String outputDir, String scenarioTag, LeaderType leaderType, BufferedWriter summaryWriter){
+            this.executor = executor;
+            this.eta = eta;
+            this.N = N;
+            this.L = L;
+            this.outputDir = outputDir;
+            this.scenarioTag = scenarioTag;
+            this.leaderType = leaderType;
+            this.summaryWriter = summaryWriter;
+        }
+
+        @Override
+        public void run(){
+            List<Future<Double>> vaFutures = new ArrayList<>(NUM_SEEDS);
+            String etaTag = String.format(Locale.US, "%.2f", eta);
+
+            for (int s = 0; s < NUM_SEEDS; s++) {
+                vaFutures.add(executor.submit(new RunSimulation(s, eta, N, L, etaTag, outputDir, scenarioTag, leaderType)));
+            }
+
+            List<Double> vaValues = new ArrayList<>(NUM_SEEDS);
+            for (Future<Double> v : vaFutures) {
+                boolean success = false;
+                do{
+                    try{
+                        vaValues.add(v.get());
+                        success=true;
+                    } catch(Exception e){}
+                }while (!success);
+            }
+
+            // Compute mean and std
+            double mean = 0;
+            for (double v : vaValues) mean += v;
+            mean /= NUM_SEEDS;
+
+            double variance = 0;
+            for (double v : vaValues) variance += Math.pow((v - mean),2);
+            variance /= NUM_SEEDS;
+            double std = Math.sqrt(variance);
+
+            try{
+                summaryWriter.write(String.format(Locale.US, "%.2f,%.6f,%.6f", eta, mean, std));
+                summaryWriter.newLine();
+                summaryWriter.flush();
+            } catch (Exception e){
+
+            }
+
+            System.out.printf("  eta=%.2f => va_mean=%.4f, va_std=%.4f%n", eta, mean, std);
+        }
+    }
+
+    private static class RunSimulation implements Callable<Double>{
+        private final int s;
+        private final double eta;
+        private final int N;
+        private final double L;
+        private final String etaTag;
+        private final String outputDir;
+        private final String scenarioTag;
+        private final LeaderType leaderType;
+
+        public RunSimulation(int s, double eta, int N, double L, String etaTag, String outputDir, String scenarioTag, LeaderType leaderType){
+            this.s = s;
+            this.eta = eta;
+            this.N = N;
+            this.L = L;
+            this.etaTag = etaTag;
+            this.outputDir = outputDir;
+            this.scenarioTag = scenarioTag;
+            this.leaderType = leaderType;
+        }
+
+        @Override
+        public Double call(){
+            long seed = 42 + s * 1000;
+            //System.out.printf("  eta=%.2f, seed=%d (run %d/%d)...%n", eta, seed, s + 1, NUM_SEEDS);
+
+            VicsekSimulation sim = new VicsekSimulation(N, L, DEFAULT_SPEED, DEFAULT_RC,
+                    eta, DEFAULT_DT, leaderType, seed);
+
+            String dynamicFile = outputDir + "/dynamic_" + scenarioTag + "_eta" + etaTag + "_s" + s + ".txt";
+            String polarizationFile = outputDir + "/polarization_" + scenarioTag + "_eta" + etaTag + "_s" + s + ".txt";
+
+            // Only write dynamic files for first seed (to keep disk usage down)
+            boolean writeDynamic = (s == 0);
+
+
+            try (BufferedWriter polWriter = new BufferedWriter(new FileWriter(polarizationFile));
+            BufferedWriter dynWriter = writeDynamic ? new BufferedWriter(new FileWriter(dynamicFile)) : null) {
+                // Initial state
+                if (writeDynamic) VicsekUtils.writeFrame(dynWriter, sim, 0);
+                double va = sim.computePolarization();
+                polWriter.write(String.format(Locale.US, "%d\t%.6f%n", 0, va));
+
+                double vaSum = 0;
+                int vaCount = 0;
+
+                for (int t = 1; t < TOTAL_STEPS; t++) {
+                    sim.step();
+                    va = sim.computePolarization();
+                    if (writeDynamic) VicsekUtils.writeFrame(dynWriter, sim, t);
+                    polWriter.write(String.format(Locale.US, "%d\t%.6f%n", t, va));
+
+                    if (t >= STEADY_STATE_START) {
+                        vaSum += va;
+                        vaCount++;
+                    }
+                }
+
+                //vaValues[s] = vaSum / vaCount;
+                if (dynWriter != null) dynWriter.close();
+
+                return vaSum / vaCount;
+            } catch (IOException e){
+                return 0.0;
+            }
+
+        }
     }
 }

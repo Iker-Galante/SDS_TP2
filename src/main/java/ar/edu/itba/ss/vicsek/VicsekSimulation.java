@@ -81,7 +81,7 @@ public class VicsekSimulation {
             double x = rng.nextDouble() * L;
             double y = rng.nextDouble() * L;
             double theta = rng.nextDouble() * 2.0 * Math.PI;
-            particles.add(new Particle(i, x, y, speed, theta, 0, 0, false, rc));
+            particles.add(new Particle(i, x, y, speed, theta, 0, 0, false));
 
         }
 
