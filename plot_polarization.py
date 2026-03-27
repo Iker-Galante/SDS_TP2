@@ -98,9 +98,6 @@ def plot_temporal_evolution(simulation_dir, output_dir, scenario, density_tag="r
         print(f"No matching polarization files for selected etas in {scenario}")
         return
 
-    # Add steady state indicator
-    ax.axvline(x=1000, color='red', linestyle='--', alpha=0.6, label='Steady state start (t=1000)')
-
     scenario_labels = {'none': 'Sin líder', 'fixed': 'Líder dirección fija', 'circular': 'Líder circular'}
     ax.set_xlabel('Tiempo (t)')
     ax.set_ylabel('Polarización $v_a$')
