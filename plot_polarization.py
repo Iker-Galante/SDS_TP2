@@ -27,6 +27,7 @@ def parse_polarization_file(filepath):
 def parse_summary_csv(filepath):
     """Parse summary CSV: eta,va_mean,va_std."""
     data = np.loadtxt(filepath, delimiter=',', skiprows=1)
+    data = data[data[:, 0].argsort()]
     return data[:, 0], data[:, 1], data[:, 2]
 
 
