@@ -99,14 +99,16 @@ def plot_temporal_evolution(simulation_dir, output_dir, scenario, density_tag="r
         return
 
     scenario_labels = {'none': 'Sin líder', 'fixed': 'Líder dirección fija', 'circular': 'Líder circular'}
-    ax.set_xlabel('Tiempo (t)')
-    ax.set_ylabel('Polarización $v_a$')
-    ax.set_title(f'Evolución temporal de $v_a$ — {scenario_labels.get(scenario, scenario)}')
-    ax.legend(loc='best')
+    ax.set_xlabel('Tiempo (t)', fontsize=20)
+    ax.set_ylabel('Polarización ' + r'$v_a$', fontsize=20)
+    ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=18, frameon=True)
     ax.set_ylim(-0.05, 1.05)
+    ax.tick_params(axis='both', labelsize=18)
+    fig.tight_layout(rect=[0, 0, 0.82, 1])
+
 
     out_path = os.path.join(output_dir, f"temporal_{scenario}_{density_tag}.png")
-    fig.savefig(out_path)
+    fig.savefig(out_path, bbox_inches='tight')
     plt.close(fig)
     print(f"Saved: {out_path}")
 
