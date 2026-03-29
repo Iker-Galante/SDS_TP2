@@ -40,12 +40,12 @@ Write-Host " Generating Animations"
 Write-Host "============================================"
 # Render sample animations for each scenario at low and high noise
 foreach ($scenario in @("none", "fixed", "circular")) {
-    foreach ($eta in @("0.00", "2.00", "5.00")) {
+    foreach ($eta in @("0.00", "1.00", "5.00")) {
         $dynFile = "$OutputDir/simulation/dynamic_${scenario}_eta${eta}_s0.txt"
         if (Test-Path $dynFile) {
             $animDir = "$OutputDir/animation/anim_${scenario}_eta${eta}"
             Write-Host ">>> Animating $scenario eta=$eta"
-            uv run python animate.py $dynFile --output_dir $animDir --frames 200 --fps 30
+            uv run python animate.py $dynFile --output_dir $animDir --fps 60 --frames 1000
         }
     }
 }

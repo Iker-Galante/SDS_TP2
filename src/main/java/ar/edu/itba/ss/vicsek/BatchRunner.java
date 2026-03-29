@@ -201,20 +201,20 @@ public class BatchRunner {
 
             boolean writeDynamic = (s == 0);
 
-            double[] vaHistory = new double[TOTAL_STEPS];
+            List<Double> vaHistory = new ArrayList<>(TOTAL_STEPS);
 
             try (BufferedWriter polWriter = new BufferedWriter(new FileWriter(polarizationFile));
                     BufferedWriter dynWriter = writeDynamic ? new BufferedWriter(new FileWriter(dynamicFile)) : null) {
                 if (writeDynamic)
                     VicsekUtils.writeFrame(dynWriter, sim, 0);
                 double va = sim.computePolarization();
-                vaHistory[0] = va;
+                vaHistory.add(va);
                 polWriter.write(String.format(Locale.US, "%d\t%.6f%n", 0, va));
 
                 for (int t = 1; t < TOTAL_STEPS; t++) {
                     sim.step();
                     va = sim.computePolarization();
-                    vaHistory[t] = va;
+                    vaHistory.add(va);
                     if (writeDynamic)
                         VicsekUtils.writeFrame(dynWriter, sim, t);
                     polWriter.write(String.format(Locale.US, "%d\t%.6f%n", t, va));
@@ -224,22 +224,20 @@ public class BatchRunner {
             }
 
             int steadyStateStart = detectSteadyState(vaHistory);
-            List<Double> steadyValues = new ArrayList<>();
-            for (int t = steadyStateStart; t < TOTAL_STEPS; t++) {
-                steadyValues.add(vaHistory[t]);
-            }
-            return steadyValues;
+            return vaHistory.subList(steadyStateStart, vaHistory.size());
+            // for (int t = steadyStateStart; t < TOTAL_STEPS; t++) {
+            //     steadyValues.add(vaHistory[t]);
+            // }
+            // return steadyValues;
         }
 
-        private int detectSteadyState(double[] va) {
-            int n = va.length;
+        private int detectSteadyState(List<Double> va) {
+            int n = va.size();
             int window = 200;
-            if (n < window * 2)
-                return n / 2;
 
             for (int t = 0; t <= n - window * 2; t += 50) {
-                double m1 = avg(va, t, t + window);
-                double m2 = avg(va, t + window, t + window * 2);
+                double m1 = windowAvg(va, t, t + window);
+                double m2 = windowAvg(va, t + window, t + window * 2);
                 if (Math.abs(m1 - m2) < 0.02) {
                     return t + window;
                 }
@@ -247,10 +245,10 @@ public class BatchRunner {
             return n / 2; // fallback
         }
 
-        private double avg(double[] arr, int start, int end) {
+        private double windowAvg(List<Double> arr, int start, int end) {
             double sum = 0;
-            for (int i = start; i < end; i++)
-                sum += arr[i];
+            for (double i : arr.subList(start, end))
+                sum += i;
             return sum / (end - start);
         }
     }

@@ -232,7 +232,7 @@ def frames_to_video(frame_dir, output_path, fps=30):
         img = imageio.v3.imread(fpath)
         writer.append_data(img)
         os.remove(fpath)
-        if idx % 10 == 0:
+        if idx % 10 == 9:
             printText = f"Stitched {idx+1:{"0"+str(len(str(len(frame_files))))}} frames ({(idx+1)*100/len(frame_files):5.2f}%), elapsed: {str(datetime.now() - initTimestamp).split('.')[0]}, remaining: {str((datetime.now() - initTimestamp) / ((idx+1)/len(frame_files)) * (len(frame_files) - idx+1) / len(frame_files)).split('.')[0]}"
             print(f"\r\033[7m{printText[0:int(len(printText)*(idx+1)/len(frame_files))]}\033[0m{printText[int(len(printText)*(idx+1)/len(frame_files)):]}", end='')
     writer.close()
