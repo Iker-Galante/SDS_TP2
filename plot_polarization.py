@@ -17,9 +17,7 @@ import matplotlib as mpl
 from numpy.ma import cos
 
 # Select a few characteristic eta values
-SELECTED_ETAS = [0.0, 1.0, 2.0, 3.5, 5.0]
-COLORS = plt.cm.viridis(np.linspace(0.1, 0.9, len(SELECTED_ETAS)))
-
+SELECTED_ETAS = [0.0, 1.0, 3, 5.0]
 
 def parse_polarization_file(filepath):
     """Parse polarization file: t\tva per line."""
@@ -30,10 +28,10 @@ def parse_polarization_file(filepath):
 
 
 def parse_summary_csv(filepath):
-    """Parse summary CSV: eta,va_mean,va_std."""
+    """Parse summary CSV: eta,va_mean,va_std,steady_state."""
     data = np.loadtxt(filepath, delimiter=',', skiprows=1)
     data = data[data[:, 0].argsort()]
-    return data[:, 0], data[:, 1], data[:, 2]
+    return data[:, 0], data[:, 1], data[:, 2], data[:, 3]
 
 
 def setup_style():
@@ -76,7 +74,12 @@ def plot_temporal_evolution(simulation_dir, output_dir, scenario, density_tag="r
         print(f"No polarization files found for scenario={scenario}")
         return
 
+    WINDOW = 10
+
     fig, ax = plt.subplots()
+    colors = plt.cm.viridis(np.linspace(0.1, 0.9, len(SELECTED_ETAS) * 2))
+
+    summaryEta, summaryMean, summaryStd, summarySteadyState = parse_summary_csv(os.path.join(simulation_dir, f"summary_{scenario}_{density_tag}.csv"))
 
     plotted = 0
     for fpath in files:
@@ -92,9 +95,18 @@ def plot_temporal_evolution(simulation_dir, output_dir, scenario, density_tag="r
             continue
 
         t, va, avgAngle, leaderAngle = parse_polarization_file(fpath)
-        ax.plot(t, va, label=f'η = {eta_val:.1f}', color=COLORS[plotted % len(COLORS)],
+        ax.plot(t, va, label=f'η = {eta_val:.1f}', color=colors[plotted % len(colors)],
                 linewidth=1.5, alpha=0.85)
-        plotted += 1
+
+        for idx, eta in enumerate(summaryEta):
+            if abs(eta_val - eta) < 0.01:
+                slice = va[max(int(summarySteadyState[idx])-WINDOW, 0) : min(int(summarySteadyState[idx])+WINDOW, len(va) - 1)]
+                ymax = min(max(slice) + 0.1, 1)
+                ymin = max(min(slice) - 0.1, 0)
+                plt.axvline(x = summarySteadyState[idx], ymax = ymax, ymin = ymin,
+                             color = colors[(plotted + 1) % len(colors)], label=f"Estacionario η={eta_val}", linestyle=(idx,(5,5)))
+
+        plotted += 2
 
     if plotted == 0:
         print(f"No matching polarization files for selected etas in {scenario}")
@@ -102,11 +114,12 @@ def plot_temporal_evolution(simulation_dir, output_dir, scenario, density_tag="r
 
     scenario_labels = {'none': 'Sin líder', 'fixed': 'Líder dirección fija', 'circular': 'Líder circular'}
     ax.set_xlabel('Tiempo (t)', fontsize=20)
-    ax.set_ylabel('Polarización ' + r'$v_a$', fontsize=20)
-    ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=18, frameon=True)
+    ax.set_ylabel('Polarización ' + r'$v_a$', fontsize=18)
+    ax.legend(loc='center left', bbox_to_anchor=(1.1, 0.5), fontsize=14, frameon=True)
     ax.set_ylim(-0.05, 1.05)
     ax.tick_params(axis='both', labelsize=18)
-    fig.tight_layout(rect=[0, 0, 0.82, 1])
+
+    fig.tight_layout(rect=[0, 0, 1.2, 1])
 
     out_path = os.path.join(output_dir, f"temporal_{scenario}_{density_tag}.png")
     fig.savefig(out_path, bbox_inches='tight')
@@ -174,7 +187,7 @@ def plot_va_vs_eta(simulation_dir, output_dir, scenario, density_tag="rho4"):
         print(f"Summary file not found: {summary_file}")
         return None
 
-    eta, va_mean, va_std = parse_summary_csv(summary_file)
+    eta, va_mean, va_std, steady_state = parse_summary_csv(summary_file)
 
     fig, ax = plt.subplots()
     ax.errorbar(eta, va_mean, yerr=va_std, fmt='o-', capsize=4, markersize=6,
@@ -223,7 +236,7 @@ def plot_comparative(simulation_dir, output_dir, scenarios, density_tag="rho4"):
             print(f"Skip {scenario}: {summary_file} not found")
             continue
 
-        eta, va_mean, va_std = parse_summary_csv(summary_file)
+        eta, va_mean, va_std, steady_state = parse_summary_csv(summary_file)
 
         color = colors_map.get(scenario, '#555')
         marker = markers_map.get(scenario, 'o')

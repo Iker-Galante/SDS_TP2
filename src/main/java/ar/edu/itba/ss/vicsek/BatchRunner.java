@@ -71,7 +71,7 @@ public class BatchRunner {
         ExecutorService batchExecutor = Executors.newFixedThreadPool(ETA_VALUES.length);
         ExecutorService simulationExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         try (BufferedWriter summaryWriter = new BufferedWriter(new FileWriter(summaryFile))) {
-            summaryWriter.write("eta,va_mean,va_std");
+            summaryWriter.write("eta,va_mean,va_std,steady_state");
             summaryWriter.newLine();
 
             for (double eta : ETA_VALUES) {
@@ -154,7 +154,7 @@ public class BatchRunner {
             double std = Math.sqrt(variance);
 
             try {
-                summaryWriter.write(String.format(Locale.US, "%.2f,%.6f,%.6f", eta, mean, std));
+                summaryWriter.write(String.format(Locale.US, "%.2f,%.6f,%.6f,%d", eta, mean, std, TOTAL_STEPS - vaValues.size()));
                 summaryWriter.newLine();
                 summaryWriter.flush();
             } catch (Exception e) {
@@ -233,12 +233,12 @@ public class BatchRunner {
 
         private int detectSteadyState(List<Double> va) {
             int n = va.size();
-            int window = 200;
+            int window = 50;
 
-            for (int t = 0; t <= n - window * 2; t += 50) {
+            for (int t = 0; t <= n - window * 2; t += 1) {
                 double m1 = windowAvg(va, t, t + window);
                 double m2 = windowAvg(va, t + window, t + window * 2);
-                if (Math.abs(m1 - m2) < 0.02) {
+                if (Math.abs(m1 - m2) < 0.01) {
                     return t + window;
                 }
             }
