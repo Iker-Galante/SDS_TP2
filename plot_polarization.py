@@ -14,6 +14,11 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from numpy.ma import cos
+
+# Select a few characteristic eta values
+SELECTED_ETAS = [0.0, 1.0, 2.0, 3.5, 5.0]
+COLORS = plt.cm.viridis(np.linspace(0.1, 0.9, len(SELECTED_ETAS)))
 
 
 def parse_polarization_file(filepath):
@@ -21,7 +26,7 @@ def parse_polarization_file(filepath):
     data = np.loadtxt(filepath)
     if data.ndim == 1:
         data = data.reshape(1, -1)
-    return data[:, 0].astype(int), data[:, 1]
+    return data[:, 0].astype(int), data[:, 1], data[:, 2], data[:, 3]
 
 
 def parse_summary_csv(filepath):
@@ -49,32 +54,29 @@ def setup_style():
         'grid.alpha': 0.3,
     })
 
-
-def plot_temporal_evolution(simulation_dir, output_dir, scenario, density_tag="rho4"):
-    """
-    Plot va(t) for a few characteristic eta values (b).
-    Shows how steady state is identified.
-    """
-    # Find polarization files for this scenario, seed 0
-    pattern = os.path.join(simulation_dir, f"polarization_{scenario}_eta*_s0.txt")
+def get_polarization_files(simulation_dir, scenario, seed):
+    # Find polarization files for this scenario
+    pattern = os.path.join(simulation_dir, f"polarization_{scenario}_eta*_s{seed}.txt")
     files = sorted(glob.glob(pattern))
 
     if not files:
         # Try without seed suffix (single run)
         pattern = os.path.join(simulation_dir, f"polarization_{scenario}_eta*.txt")
         files = sorted(glob.glob(pattern))
+    
+    return files
 
+def plot_temporal_evolution(simulation_dir, output_dir, scenario, density_tag="rho4"):
+    """
+    Plot va(t) for a few characteristic eta values (b).
+    Shows how steady state is identified.
+    """
+    files = get_polarization_files(simulation_dir, scenario, 0)
     if not files:
         print(f"No polarization files found for scenario={scenario}")
         return
 
-    # Select a few characteristic eta values
-    selected_etas = [0.0, 1.0, 2.0, 3.5, 5.0]
-
     fig, ax = plt.subplots()
-
-    cmap = plt.cm.viridis
-    colors = cmap(np.linspace(0.1, 0.9, len(selected_etas)))
 
     plotted = 0
     for fpath in files:
@@ -86,11 +88,11 @@ def plot_temporal_evolution(simulation_dir, output_dir, scenario, density_tag="r
         except (IndexError, ValueError):
             continue
 
-        if not any(abs(eta_val - se) < 0.01 for se in selected_etas):
+        if not any(abs(eta_val - se) < 0.01 for se in SELECTED_ETAS):
             continue
 
-        t, va = parse_polarization_file(fpath)
-        ax.plot(t, va, label=f'η = {eta_val:.1f}', color=colors[plotted % len(colors)],
+        t, va, avgAngle, leaderAngle = parse_polarization_file(fpath)
+        ax.plot(t, va, label=f'η = {eta_val:.1f}', color=COLORS[plotted % len(COLORS)],
                 linewidth=1.5, alpha=0.85)
         plotted += 1
 
@@ -106,11 +108,60 @@ def plot_temporal_evolution(simulation_dir, output_dir, scenario, density_tag="r
     ax.tick_params(axis='both', labelsize=18)
     fig.tight_layout(rect=[0, 0, 0.82, 1])
 
-
     out_path = os.path.join(output_dir, f"temporal_{scenario}_{density_tag}.png")
     fig.savefig(out_path, bbox_inches='tight')
     plt.close(fig)
     print(f"Saved: {out_path}")
+
+
+def plot_angular_correlation(simulation_dir, output_dir, scenario, density_tag="rho4"):
+    """
+    Plot angular correlation between leader and flock (bonus point)
+    """
+    if "none" in scenario.lower():
+        # Leaderless scenario, correlation is futile
+        return
+    
+    files = get_polarization_files(simulation_dir, scenario, 0)
+    if not files:
+        print(f"No polarization files found for scenario={scenario}")
+        return
+
+    plotted = 0
+    for fpath in files:
+        # Extract eta from filename
+        fname = os.path.basename(fpath)
+        try:
+            eta_str = fname.split("_eta")[1].split("_")[0].replace(".txt", "")
+            eta_val = float(eta_str)
+        except (IndexError, ValueError):
+            continue
+
+        if not any(abs(eta_val - se) < 0.01 for se in SELECTED_ETAS):
+            continue
+
+        fig, ax = plt.subplots()
+
+        t, va, avgAngle, leaderAngle = parse_polarization_file(fpath)
+        correlation = cos(leaderAngle - avgAngle)
+        ax.plot(t, correlation, linewidth=1.5, alpha=0.85)
+        plotted += 1
+
+        scenario_labels = {'none': 'Sin líder', 'fixed': 'Líder dirección fija', 'circular': 'Líder circular'}
+        ax.set_xlabel('Tiempo (t)', fontsize=20)
+        ax.set_ylabel('Correlación angular ' + r'$C(t)$', fontsize=20)
+        ax.set_ylim(-1.05, 1.05)
+        ax.tick_params(axis='both', labelsize=18)
+        fig.tight_layout(rect=[0, 0, 0.82, 1])
+        ax.set_title(f'Correlación angular líder-bandada — {scenario_labels.get(scenario, scenario)}, η = {eta_val}')
+        out_path = os.path.join(output_dir, f"angular_{scenario}_eta{eta_val:.2f}_{density_tag}.png")
+        fig.savefig(out_path, bbox_inches='tight')
+        plt.close(fig)
+        print(f"Saved: {out_path}")
+
+    if plotted == 0:
+        print(f"No matching polarization files for selected etas in {scenario}")
+        return
 
 
 def plot_va_vs_eta(simulation_dir, output_dir, scenario, density_tag="rho4"):
@@ -215,6 +266,8 @@ def main():
         plot_temporal_evolution(args.simulation_dir, args.output_dir, scenario, density_tag)
         # (c) va vs eta
         plot_va_vs_eta(args.simulation_dir, args.output_dir, scenario, density_tag)
+        # (bonus point) angular correlation
+        plot_angular_correlation(args.simulation_dir, args.output_dir, scenario, density_tag)
 
     # (d) Comparative
     print(f"\n=== Comparative ===")

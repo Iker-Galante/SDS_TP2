@@ -24,6 +24,11 @@ public class VicsekUtils {
         }
     }
 
+    public static void writePolarization(BufferedWriter polWriter, VicsekSimulation sim, int t) throws IOException{
+        polWriter.write(String.format(Locale.US, "%d\t%.6f\t%.6f\t%.6f%n", 
+            t, sim.computePolarization(), sim.computeAvgAngle(), sim.getLeader() != null ? sim.getLeader().getTheta() : 0));
+    }
+
     public static VicsekSimulation.LeaderType parseLeaderType(String s) {
         return switch (s.toLowerCase()) {
             case "none" -> VicsekSimulation.LeaderType.NONE;

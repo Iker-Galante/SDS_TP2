@@ -56,13 +56,13 @@ public class VicsekMain {
             // Write initial state (t=0)
             VicsekUtils.writeFrame(dynWriter, sim, 0);
             double va = sim.computePolarization();
-            polWriter.write(String.format(Locale.US, "%d\t%.6f%n", 0, va));
+            VicsekUtils.writePolarization(polWriter, sim, 0);
 
             for (int t = 1; t < totalSteps; t++) {
                 sim.step();
                 VicsekUtils.writeFrame(dynWriter, sim, t);
                 va = sim.computePolarization();
-                polWriter.write(String.format(Locale.US, "%d\t%.6f%n", t, va));
+                VicsekUtils.writePolarization(polWriter, sim, t);
                 if (t % 100 == 0) {
                     System.out.printf("  Step %d/%d, va=%.4f%n", t, totalSteps, va);
                 }

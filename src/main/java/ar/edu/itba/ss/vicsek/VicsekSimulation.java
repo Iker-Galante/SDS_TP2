@@ -168,6 +168,17 @@ public class VicsekSimulation {
         return magnitude / (N * speed);
     }
 
+    public double computeAvgAngle(){
+        double sinSum = 0, cosSum = 0;
+        for (Particle p2 : this.particles) {
+            if (!p2.isLeader()){
+                sinSum += Math.sin(p2.getTheta());
+                cosSum += Math.cos(p2.getTheta());
+            }
+        }
+        return Math.atan2(sinSum, cosSum);
+    }
+
     // Getters for output
     public int getN() {
         return N;

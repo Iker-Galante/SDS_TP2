@@ -209,7 +209,7 @@ public class BatchRunner {
                     VicsekUtils.writeFrame(dynWriter, sim, 0);
                 double va = sim.computePolarization();
                 vaHistory.add(va);
-                polWriter.write(String.format(Locale.US, "%d\t%.6f%n", 0, va));
+                VicsekUtils.writePolarization(polWriter, sim, 0);
 
                 for (int t = 1; t < TOTAL_STEPS; t++) {
                     sim.step();
@@ -217,7 +217,7 @@ public class BatchRunner {
                     vaHistory.add(va);
                     if (writeDynamic)
                         VicsekUtils.writeFrame(dynWriter, sim, t);
-                    polWriter.write(String.format(Locale.US, "%d\t%.6f%n", t, va));
+                        VicsekUtils.writePolarization(polWriter, sim, t);
                 }
             } catch (IOException e) {
                 // Error writting, ignore
