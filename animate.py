@@ -103,7 +103,7 @@ def angle_to_color(angles):
     return rgb
 
 
-def plt_render_frame(frame, L, output_path, frame_idx):
+def plt_render_frame(frame, L, output_path, frame_idx, glorious_hd):
     """Render a single frame using pyplot."""
     positions = frame['positions']
     velocities = frame['velocities']
@@ -131,7 +131,7 @@ def plt_render_frame(frame, L, output_path, frame_idx):
     
     # Show plot
     #plt.axis('off')
-    plt.savefig(output_path,facecolor=background_color,edgecolor=leader_color, dpi=80)
+    plt.savefig(output_path,facecolor=background_color,edgecolor=leader_color, dpi=240 if glorious_hd else 80)
     fig.clear()
     plt.close(fig)
     return frame_idx
@@ -279,7 +279,9 @@ def main():
     parser.add_argument("--fps", type=int, default=60, help="Frames per second for video")
     parser.add_argument("--no-video", action="store_true", help="Skip .mp4 generation (frames only)")
     parser.add_argument("--preview", action="store_true", help="Will display a preview of the rendered video")
+    parser.add_argument("--glorious-hd", action="store_true", help="Will render video in 2400x2400 resolution instead of 800x800 (will take longer)")
     args = parser.parse_args()
+
 
     print(f"Parsing {args.dynamic_file}...")
     frames = parse_dynamic_file(args.dynamic_file)
@@ -298,12 +300,12 @@ def main():
         thread = multiprocessing.Process(target=render_preview, args=(args.output_dir, start, total, args.skip))
         thread.start()
 
-    with multiprocessing.Pool(processes=multiprocessing.cpu_count(), maxtasksperchild=100) as pool:
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count(), maxtasksperchild = 25 if args.glorious_hd else 100) as pool:
         for idx in range(start, total, args.skip):
             frame = frames[idx]
             out_path = get_frame_path(args.output_dir, idx)
             #jobs.append(pool.apply_async(ovito_render_frame, args=(frame, args.L, out_path, idx)))
-            jobs.append(pool.apply_async(plt_render_frame, args=(frame, args.L, out_path, idx)))
+            jobs.append(pool.apply_async(plt_render_frame, args=(frame, args.L, out_path, idx, args.glorious_hd)))
             first = False
             if len(jobs) % 100 == 99:
                 print(f"\rPooled up {len(jobs)+1} frames for rendering...", end='')
